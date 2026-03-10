@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<ruleset name="MC-EMS Coding Standards">
+    <description>PHP CodeSniffer configuration for MC-EMS WordPress plugin.</description>
+
+    <!-- Files and directories to check -->
+    <file>mc-ems-base-fix/</file>
+
+    <!-- Exclude generated / third-party code -->
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/node_modules/*</exclude-pattern>
+    <exclude-pattern>*/assets/*</exclude-pattern>
+
+    <!-- Use WordPress Coding Standards -->
+    <rule ref="WordPress"/>
+
+    <!-- PHP version compatibility -->
+    <config name="testVersion" value="7.0-"/>
+
+    <!-- WordPress version for deprecated checks -->
+    <config name="minimum_supported_wp_version" value="6.0"/>
+
+    <!-- Allow short array syntax -->
+    <rule ref="Generic.Arrays.DisallowLongArraySyntax.Found">
+        <severity>0</severity>
+    </rule>
+
+    <!-- Set text domain -->
+    <rule ref="WordPress.WP.I18n">
+        <properties>
+            <property name="text_domain" type="array" value="mc-ems"/>
+        </properties>
+    </rule>
+
+    <!-- Exclude specific rules that conflict with modern PHP style -->
+    <rule ref="WordPress.Files.FileName">
+        <properties>
+            <property name="is_theme" value="false"/>
+        </properties>
+    </rule>
+</ruleset>
