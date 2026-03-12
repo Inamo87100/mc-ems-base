@@ -33,4 +33,33 @@ class MCEMS_Tutor {
         if ($course_id <= 0) return '';
         return (string) get_the_title($course_id);
     }
+
+    /**
+     * Check whether a user has a valid (active) Tutor LMS enrollment for a course.
+     * Admins and instructors are always considered enrolled.
+     */
+    public static function is_user_enrolled(int $user_id, int $course_id): bool {
+        if ($user_id <= 0 || $course_id <= 0) return false;
+
+        // Bypass: admins and instructors do not need an enrollment
+        if (user_can($user_id, 'manage_options')) return true;
+        if (user_can($user_id, 'tutor_instructor') || user_can($user_id, 'tutor_instructor_manager')) return true;
+
+        // Primary check: Tutor LMS API
+        if (function_exists('tutor_utils') && method_exists(tutor_utils(), 'is_enrolled')) {
+            return (bool) tutor_utils()->is_enrolled($course_id, $user_id);
+        }
+
+        // Fallback: query the tutor_enrolled post type directly
+        $enrolled = get_posts([
+            'post_type'      => 'tutor_enrolled',
+            'post_status'    => 'completed',
+            'post_parent'    => $course_id,
+            'author'         => $user_id,
+            'posts_per_page' => 1,
+            'fields'         => 'ids',
+        ]);
+
+        return !empty($enrolled);
+    }
 }
