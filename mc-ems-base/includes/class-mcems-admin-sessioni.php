@@ -154,10 +154,8 @@ class MCEMS_Admin_Sessioni {
                                         .mcems-cal-day.mcems-cal-today{font-weight:700;border:2px solid #2271b1;}
                                         .mcems-cal-day.mcems-cal-past{color:#c3c4c7;cursor:default;}
                                         .mcems-cal-day.mcems-cal-past:hover{background:none;}
-                                        #mcems-selected-count{margin-top:6px;font-size:12px;color:#646970;}
                                         </style>
                                         <div id="mcems-calendar"></div>
-                                        <div id="mcems-selected-count"></div>
                                         <div id="mcems-selected-dates"></div>
                                     </div>
                                 </td>
@@ -624,7 +622,6 @@ class MCEMS_Admin_Sessioni {
 
             function updateHidden(){
                 var container = document.getElementById('mcems-selected-dates');
-                var countEl   = document.getElementById('mcems-selected-count');
                 if (!container) return;
                 container.innerHTML = '';
                 var keys = Object.keys(selected).sort();
@@ -635,24 +632,6 @@ class MCEMS_Admin_Sessioni {
                     inp.value = d;
                     container.appendChild(inp);
                 });
-                if (countEl) {
-                    if (keys.length) {
-                        var ul = document.createElement('ul');
-                        ul.style.margin  = '4px 0 0 0';
-                        ul.style.padding = '0 0 0 16px';
-                        ul.setAttribute('aria-label', <?php echo wp_json_encode(__('Selected dates', 'mc-ems')); ?>);
-                        keys.forEach(function(d){
-                            var li = document.createElement('li');
-                            li.textContent = d;
-                            li.style.fontSize = '12px';
-                            ul.appendChild(li);
-                        });
-                        countEl.innerHTML = '';
-                        countEl.appendChild(ul);
-                    } else {
-                        countEl.innerHTML = '';
-                    }
-                }
             }
 
             function render(){
