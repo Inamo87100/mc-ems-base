@@ -13,6 +13,8 @@ class MCEMS_Booking {
         add_shortcode('mcems_book_exam', [__CLASS__, 'shortcode_prenota']);
         add_shortcode('mcems_manage_booking', [__CLASS__, 'shortcode_gestisci']);
 
+        add_action('wp_enqueue_scripts', [__CLASS__, 'enqueue_assets']);
+
         add_action('wp_ajax_get_slot_per_data', [__CLASS__, 'ajax_get_slots_by_date']);
         add_action('wp_ajax_nopriv_get_slot_per_data', [__CLASS__, 'ajax_get_slots_by_date']);
         add_action('wp_ajax_mcems_get_booking_calendar', [__CLASS__, 'ajax_get_booking_calendar']);
@@ -26,6 +28,36 @@ class MCEMS_Booking {
         // Cleanup when a session is deleted from admin
         add_action('before_delete_post', [__CLASS__, 'on_before_delete_post'], 10, 1);
         add_action('trashed_post', [__CLASS__, 'on_before_delete_post'], 10, 1);
+    }
+
+    /* =========================
+       Assets
+       ========================= */
+    public static function enqueue_assets(): void {
+        $ver = defined('MCEMS_VERSION') ? MCEMS_VERSION : '1.0.0';
+        $url = defined('MCEMS_PLUGIN_URL') ? MCEMS_PLUGIN_URL : '';
+
+        wp_register_style(
+            'mcems-style',
+            $url . 'assets/css/style.css',
+            [],
+            $ver
+        );
+        wp_enqueue_style('mcems-style');
+
+        wp_register_script(
+            'mcems-booking',
+            $url . 'assets/js/booking.js',
+            [],
+            $ver,
+            true
+        );
+        wp_enqueue_script('mcems-booking');
+
+        wp_localize_script('mcems-booking', 'MCEMS_BOOKING', [
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce'   => wp_create_nonce('mcems_booking'),
+        ]);
     }
 
     /* =========================
