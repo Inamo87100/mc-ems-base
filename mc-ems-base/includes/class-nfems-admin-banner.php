@@ -20,7 +20,6 @@ class NFEMS_Admin_Banner {
         }
 
         $allowed = [
-            'settings_page_nfems-settings',
             NFEMS_CPT_Sessioni_Esame::CPT . '_page_nfems-settings-cpt',
             NFEMS_CPT_Sessioni_Esame::CPT . '_page_nfems-gestione-sessioni',
         ];

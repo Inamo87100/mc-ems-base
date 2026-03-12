@@ -39,10 +39,44 @@ class NFEMS_CPT_Sessioni_Esame {
     }
 
     /**
-     * Remove the default "Add New" submenu for this CPT.
+     * Remove the default "Add New" submenu for this CPT and reorder submenus
+     * so that: Create sessions → Sessions list → Settings.
      */
     public static function tweak_admin_menu(): void {
-        remove_submenu_page('edit.php?post_type=' . self::CPT, 'post-new.php?post_type=' . self::CPT);
+        global $submenu;
+
+        $parent = 'edit.php?post_type=' . self::CPT;
+        remove_submenu_page($parent, 'post-new.php?post_type=' . self::CPT);
+
+        if (empty($submenu[$parent])) return;
+
+        $create   = null; // nfems-gestione-sessioni
+        $list     = null; // edit.php?post_type=slot_esame  (the CPT "all items" page)
+        $settings = null; // nfems-settings-cpt
+        $others   = [];
+
+        foreach ($submenu[$parent] as $item) {
+            $slug = isset($item[2]) ? (string) $item[2] : '';
+            if ($slug === 'nfems-gestione-sessioni') {
+                $create = $item;
+            } elseif ($slug === $parent) {
+                $list = $item;
+            } elseif ($slug === 'nfems-settings-cpt') {
+                $settings = $item;
+            } else {
+                $others[] = $item;
+            }
+        }
+
+        $ordered = [];
+        if ($create)   $ordered[] = $create;
+        if ($list)     $ordered[] = $list;
+        if ($settings) $ordered[] = $settings;
+        foreach ($others as $item) {
+            $ordered[] = $item;
+        }
+
+        $submenu[$parent] = array_values($ordered);
     }
 
     /**
