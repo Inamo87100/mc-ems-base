@@ -16,6 +16,8 @@ class MCEMS_Calendar_Sessioni {
         add_shortcode('mcems_sessions_calendar', [__CLASS__, 'shortcode']);
         add_shortcode('calendario_slot_esame', [__CLASS__, 'shortcode']);
 
+        add_action('wp_enqueue_scripts', [__CLASS__, 'enqueue_assets']);
+
         add_action('wp_ajax_get_slot_data', [__CLASS__, 'ajax_get_slot_data']);
         add_action('wp_ajax_nopriv_get_slot_data', [__CLASS__, 'ajax_get_slot_data']);
 
@@ -28,6 +30,43 @@ class MCEMS_Calendar_Sessioni {
 
         add_action('init', [__CLASS__, 'schedule_midnight_event']);
         add_action(self::CRON_HOOK, [__CLASS__, 'midnight_check_unassigned_slots']);
+    }
+
+    public static function enqueue_assets(): void {
+        $ver = defined('MCEMS_VERSION') ? MCEMS_VERSION : '1.0.0';
+        $url = defined('MCEMS_PLUGIN_URL') ? MCEMS_PLUGIN_URL : '';
+
+        wp_register_style('mcems-style', $url . 'assets/css/style.css', [], $ver);
+        wp_enqueue_style('mcems-style');
+
+        wp_register_script('mcems-calendar-sessioni', $url . 'assets/js/calendar-sessioni.js', [], $ver, true);
+        wp_enqueue_script('mcems-calendar-sessioni');
+
+        wp_localize_script('mcems-calendar-sessioni', 'MCEMS_CAL', [
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce'   => wp_create_nonce(self::NONCE_ACTION),
+            'locale'  => get_locale(),
+            'i18n'    => [
+                'loading'    => __('Loading…', 'mc-ems'),
+                'loadError'  => __('Error loading calendar data.', 'mc-ems'),
+                'available'  => __('Available', 'mc-ems'),
+                'limited'    => __('Limited', 'mc-ems'),
+                'full'       => __('Full', 'mc-ems'),
+                'past'       => __('Past', 'mc-ems'),
+                'sessions'   => __('Sessions', 'mc-ems'),
+                'capacity'   => __('Capacity', 'mc-ems'),
+                'booked'     => __('Booked', 'mc-ems'),
+                'proctor'    => __('Proctor', 'mc-ems'),
+                'candidates' => __('Candidates', 'mc-ems'),
+                'mon'        => __('Mon', 'mc-ems'),
+                'tue'        => __('Tue', 'mc-ems'),
+                'wed'        => __('Wed', 'mc-ems'),
+                'thu'        => __('Thu', 'mc-ems'),
+                'fri'        => __('Fri', 'mc-ems'),
+                'sat'        => __('Sat', 'mc-ems'),
+                'sun'        => __('Sun', 'mc-ems'),
+            ],
+        ]);
     }
 
     private static function cpt(): string {

@@ -11,6 +11,38 @@ class MCEMS_Admin_Sessioni {
 
     public static function init(): void {
         add_action('admin_menu', [__CLASS__, 'menu']);
+        add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_assets']);
+    }
+
+    public static function enqueue_assets(string $hook): void {
+        // Only load on the plugin's admin pages
+        if (strpos($hook, 'mcems') === false && strpos($hook, MCEMS_CPT_Sessioni_Esame::CPT) === false) {
+            return;
+        }
+
+        $ver = defined('MCEMS_VERSION') ? MCEMS_VERSION : '1.0.0';
+        $url = defined('MCEMS_PLUGIN_URL') ? MCEMS_PLUGIN_URL : '';
+
+        wp_register_style('mcems-admin-style', $url . 'assets/css/admin.css', [], $ver);
+        wp_enqueue_style('mcems-admin-style');
+
+        wp_register_script('mcems-admin', $url . 'assets/js/admin.js', [], $ver, true);
+        wp_enqueue_script('mcems-admin');
+
+        wp_localize_script('mcems-admin', 'MCEMS_ADMIN', [
+            'ajaxUrl'     => admin_url('admin-ajax.php'),
+            'nonce'       => wp_create_nonce('mcems_admin'),
+            'exportNonce' => wp_create_nonce('mcems_export_csv'),
+            'i18n'        => [
+                'selectAction' => __('Please select an action.', 'mc-ems'),
+                'selectItems'  => __('Please select at least one item.', 'mc-ems'),
+                'confirmBulk'  => __('Apply action to {count} item(s)?', 'mc-ems'),
+                'error'        => __('An error occurred.', 'mc-ems'),
+                'networkError' => __('Network error. Please try again.', 'mc-ems'),
+                'exporting'    => __('Exporting…', 'mc-ems'),
+                'exportCsv'    => __('Export CSV', 'mc-ems'),
+            ],
+        ]);
     }
 
     public static function menu(): void {
