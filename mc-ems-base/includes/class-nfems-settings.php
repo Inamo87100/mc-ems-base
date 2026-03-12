@@ -189,18 +189,10 @@ class NFEMS_Settings {
     }
 
     public static function menu(): void {
-        add_options_page(
-            'MC-EMS',
-            'MC-EMS',
-            'manage_options',
-            'nfems-settings',
-            [__CLASS__, 'render']
-        );
-
         add_submenu_page(
             'edit.php?post_type=' . NFEMS_CPT_Sessioni_Esame::CPT,
-            __('MC-EMS Settings', 'mc-ems'),
-            __('MC-EMS Settings', 'mc-ems'),
+            __('Settings', 'mc-ems'),
+            __('Settings', 'mc-ems'),
             'manage_options',
             'nfems-settings-cpt',
             [__CLASS__, 'render']
@@ -671,7 +663,7 @@ class NFEMS_Settings {
 
         echo '<h2 class="nav-tab-wrapper" style="margin-top:12px;">';
         foreach ($tabs as $key => $label) {
-            $url = esc_url(add_query_arg(['page' => 'nfems-settings', 'tab' => $key], admin_url('options-general.php')));
+            $url = esc_url(add_query_arg(['page' => 'nfems-settings-cpt', 'tab' => $key], admin_url('edit.php?post_type=' . NFEMS_CPT_Sessioni_Esame::CPT)));
             $cls = ($tab === $key) ? 'nav-tab nav-tab-active' : 'nav-tab';
             echo '<a class="' . esc_attr($cls) . '" href="' . $url . '">' . esc_html($label) . '</a>';
         }

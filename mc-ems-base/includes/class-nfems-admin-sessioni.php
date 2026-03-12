@@ -16,8 +16,8 @@ class NFEMS_Admin_Sessioni {
     public static function menu(): void {
         add_submenu_page(
             'edit.php?post_type=' . NFEMS_CPT_Sessioni_Esame::CPT,
-            __('Exam Sessions Management', 'mc-ems'),
-            __('Exam Sessions Management', 'mc-ems'),
+            __('Create sessions', 'mc-ems'),
+            __('Create sessions', 'mc-ems'),
             'manage_options',
             'nfems-gestione-sessioni',
             [__CLASS__, 'render']
