@@ -90,7 +90,11 @@ class MCEMS_Admin_Sessioni {
                         (int) self::BASE_MAX_ACTIVE_SESSIONS,
                         (int) $remaining
                     )); ?>
-                    <br><small style="color:#92400e;"><?php echo esc_html__('Base license: max 1 session per day and max 5 active sessions. Upgrade to Premium to remove these limits.', 'mc-ems'); ?></small>
+                    <br><small style="color:#92400e;"><?php echo esc_html(sprintf(
+                        __('Base license: max 1 session per day, max %d active sessions, and max %d seats per session. Upgrade to Premium to remove these limits.', 'mc-ems'),
+                        (int) self::BASE_MAX_ACTIVE_SESSIONS,
+                        (int) self::BASE_MAX_CAPACITY
+                    )); ?></small>
                 </div>
                 <?php endif; ?>
 
