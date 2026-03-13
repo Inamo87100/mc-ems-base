@@ -302,6 +302,10 @@ class MCEMS_Calendar_Sessioni {
     }
 
     public static function shortcode(): string {
+        if (!MCEMS_Settings::user_can_view_shortcode('mcems_sessions_calendar')) {
+            return '';
+        }
+
         $nonce = wp_create_nonce(self::NONCE_ACTION);
 
         ob_start();
