@@ -14,6 +14,8 @@ if (!defined('ABSPATH')) exit;
  */
 class MCEMS_Tutor_Gate {
 
+    const SIDEBAR_SELECTOR = '.tutor-card.tutor-card-md.tutor-sidebar-card';
+
     public static function init(): void {
         add_action('template_redirect', [__CLASS__, 'maybe_block_course_page'], 0);
     }
@@ -198,6 +200,47 @@ class MCEMS_Tutor_Gate {
         exit;
     }
 
+    /**
+     * Instead of replacing the entire page, hide the Tutor LMS sidebar via CSS
+     * and inject the block message box in its place using JavaScript.
+     */
+    private static function inject_sidebar_block(string $title, string $body_html): void {
+        add_action('wp_head', function() {
+            echo '<style>' .
+                self::SIDEBAR_SELECTOR . '{display:none!important}' .
+                '.mcems-locked-course{max-width:820px;margin:28px auto;padding:18px;border-radius:16px;border:1px solid #fda29b;background:#fffbfa;box-shadow:0 10px 30px rgba(16,24,40,.08);}' .
+                '.mcems-locked-course__title{font-weight:900;color:#b42318;font-size:18px;margin-bottom:8px;}' .
+                '.mcems-locked-course__body{color:#7a271a;font-weight:800;font-size:14px;line-height:1.5;}' .
+                '</style>' . "\n";
+        });
+
+        $allowed_html = [
+            'br'     => [],
+            'strong' => [],
+            'a'      => [
+                'href'  => [],
+                'style' => [],
+            ],
+        ];
+
+        $title_json = wp_json_encode(esc_html($title));
+        $body_json  = wp_json_encode(wp_kses($body_html, $allowed_html));
+
+        add_action('wp_footer', function() use ($title_json, $body_json) {
+            echo '<script>' .
+                '(function(){' .
+                'var sidebar=document.querySelector(' . wp_json_encode(self::SIDEBAR_SELECTOR) . ');' .
+                'if(!sidebar)return;' .
+                'var box=document.createElement("div");' .
+                'box.className="mcems-locked-course";' .
+                'box.innerHTML=\'<div class="mcems-locked-course__title">\'+' . $title_json . '+\'</div>\'' .
+                '+\'<div class="mcems-locked-course__body">\'+' . $body_json . '+\'</div>\';' .
+                'sidebar.parentNode.insertBefore(box,sidebar);' .
+                '})();' .
+                '</script>' . "\n";
+        });
+    }
+
     private static function get_manage_booking_url(): string {
         $mb = '';
 
@@ -240,10 +283,11 @@ class MCEMS_Tutor_Gate {
         $user_id = (int) get_current_user_id();
 
         if ($user_id <= 0) {
-            self::render_locked_page(
+            self::inject_sidebar_block(
                 __('Restricted access', 'mc-ems'),
                 esc_html__('You must be logged in to access this course.', 'mc-ems')
             );
+            return;
         }
 
         if (self::bypass_user($user_id)) {
@@ -270,19 +314,21 @@ class MCEMS_Tutor_Gate {
                 $body .= '<br><br><a href="' . esc_url($mb) . '" style="display:inline-block;padding:10px 14px;border-radius:10px;background:#1a73e8;color:#fff;text-decoration:none;font-weight:900;">' . esc_html__('Manage exam booking', 'mc-ems') . '</a>';
             }
 
-            self::render_locked_page(
+            self::inject_sidebar_block(
                 esc_html__('Course access not available', 'mc-ems'),
                 $body
             );
+            return;
         }
 
         $session_ts = self::get_session_ts_from_slot($slot_id);
 
         if ($session_ts <= 0) {
-            self::render_locked_page(
+            self::inject_sidebar_block(
                 __('Course access not available', 'mc-ems'),
                 esc_html__('Your exam booking does not contain a valid date/time. Please contact support.', 'mc-ems')
             );
+            return;
         }
 
         $unlock_ts = max(0, $session_ts - (self::unlock_lead_minutes() * 60));
@@ -308,10 +354,11 @@ class MCEMS_Tutor_Gate {
                     $body .= '<br><br><a href="' . esc_url($mb) . '" style="display:inline-block;padding:10px 14px;border-radius:10px;background:#1a73e8;color:#fff;text-decoration:none;font-weight:900;">' . esc_html__('Manage exam booking', 'mc-ems') . '</a>';
                 }
 
-                self::render_locked_page(
+                self::inject_sidebar_block(
                     esc_html__('Course access not available', 'mc-ems'),
                     $body
                 );
+                return;
             }
         }
 
@@ -321,7 +368,7 @@ class MCEMS_Tutor_Gate {
 
         $unlock_h = wp_date('d/m/Y \a\t H:i', $unlock_ts, wp_timezone());
 
-        self::render_locked_page(
+        self::inject_sidebar_block(
             esc_html__('Course locked', 'mc-ems'),
             sprintf(
                 '%s <strong>%s</strong>.',
