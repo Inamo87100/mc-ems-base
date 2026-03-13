@@ -15,7 +15,10 @@ if (!defined('ABSPATH')) exit;
 class MCEMS_Tutor_Gate {
 
     const SIDEBAR_SELECTOR      = '.tutor-card.tutor-card-md.tutor-sidebar-card';
-    const DETAILS_TAB_SELECTOR  = '.tutor-exam-details-tab.tutor-mt-32';
+    const DETAILS_TAB_SELECTOR  = '.tutor-course-details-tab.tutor-mt-32';
+    const CURRICULUM_SELECTOR   = '.tutor-course-single-curriculum';
+    const LESSON_SELECTOR       = '.tutor-course-lesson';
+    const QUIZ_SELECTOR         = '.tutor-course-quiz';
 
     public static function init(): void {
         add_action('template_redirect', [__CLASS__, 'maybe_block_exam_page'], 0);
@@ -210,6 +213,9 @@ class MCEMS_Tutor_Gate {
             echo '<style>' .
                 self::SIDEBAR_SELECTOR . '{display:none!important}' .
                 self::DETAILS_TAB_SELECTOR . '{display:none!important}' .
+                self::CURRICULUM_SELECTOR . '{display:none!important}' .
+                self::LESSON_SELECTOR . '{display:none!important}' .
+                self::QUIZ_SELECTOR . '{display:none!important}' .
                 '.mcems-locked-exam{max-width:820px;margin:28px auto;padding:18px;border-radius:16px;border:1px solid #fda29b;background:#fffbfa;box-shadow:0 10px 30px rgba(16,24,40,.08);}' .
                 '.mcems-locked-exam__title{font-weight:900;color:#b42318;font-size:18px;margin-bottom:8px;}' .
                 '.mcems-locked-exam__body{color:#7a271a;font-weight:800;font-size:14px;line-height:1.5;}' .
