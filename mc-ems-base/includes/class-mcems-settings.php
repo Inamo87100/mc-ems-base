@@ -60,6 +60,9 @@ class MCEMS_Settings {
 
             'cal_email_subject_warning'          => 'Unassigned exam session reminder — {session_date} {session_time}',
             'cal_email_body_warning'             => "The following exam session is scheduled for tomorrow and still has no assigned proctor.\n\nCourse: {course_title}\nDate: {session_date}\nTime: {session_time}\nSession ID: {session_id}",
+
+            // Access Control: role-based shortcode visibility (empty array = all roles allowed)
+            'shortcode_roles' => [],
         ];
     }
 
@@ -453,6 +456,12 @@ class MCEMS_Settings {
             'key'  => 'manage_booking_page_id',
             'desc' => __('Choose the page where you placed the [mcems_manage_booking] shortcode. The plugin will use this to generate dynamic links to the “Manage exam booking” page.', 'mc-ems'),
         ]);
+
+        add_settings_section('mcems_section_access_control', __('Access Control', 'mc-ems'), function () {
+            echo '<p class="description">' . esc_html__('Select which WordPress roles can view each shortcode. By default all roles are allowed (no restrictions).', 'mc-ems') . '</p>';
+        }, self::OPTION_KEY);
+
+        add_settings_field('shortcode_roles', __('Shortcode visibility by role', 'mc-ems'), [__CLASS__, 'field_shortcode_roles'], self::OPTION_KEY, 'mcems_section_access_control', []);
     }
 
     /**
@@ -616,7 +625,66 @@ class MCEMS_Settings {
             if (isset($input[$k])) $out[$k] = sanitize_textarea_field($input[$k]);
         }
 
+        if ($tab === 'access_control' || isset($input['shortcode_roles'])) {
+            $raw_roles = isset($input['shortcode_roles']) && is_array($input['shortcode_roles']) ? $input['shortcode_roles'] : [];
+            $valid_shortcodes = array_keys(self::get_access_control_shortcodes());
+            $all_roles        = array_keys(wp_roles()->roles);
+            $cleaned = [];
+            foreach ($valid_shortcodes as $sc) {
+                $checked = [];
+                if (isset($raw_roles[$sc]) && is_array($raw_roles[$sc])) {
+                    foreach ($raw_roles[$sc] as $role) {
+                        $role = sanitize_key((string) $role);
+                        if (in_array($role, $all_roles, true)) {
+                            $checked[] = $role;
+                        }
+                    }
+                }
+                $cleaned[$sc] = $checked;
+            }
+            $out['shortcode_roles'] = $cleaned;
+        }
+
         return $out;
+    }
+
+    /**
+     * Returns the list of shortcodes managed by Access Control.
+     * Key = shortcode tag (without brackets), value = display label.
+     */
+    public static function get_access_control_shortcodes(): array {
+        return [
+            'mcems_book_exam'      => __('Exam Booking', 'mc-ems'),
+            'mcems_manage_booking' => __('Manage Booking', 'mc-ems'),
+        ];
+    }
+
+    /**
+     * Returns the allowed roles for a given shortcode tag.
+     * Empty array means "all roles allowed" (default / no restriction).
+     */
+    public static function get_shortcode_roles(string $shortcode): array {
+        $opt = self::get();
+        $map = $opt['shortcode_roles'] ?? [];
+        if (!is_array($map)) return [];
+        return isset($map[$shortcode]) && is_array($map[$shortcode]) ? $map[$shortcode] : [];
+    }
+
+    /**
+     * Checks whether the current user is allowed to see a shortcode.
+     * Returns true if no roles are configured (default) or if the user has one of the allowed roles.
+     */
+    public static function user_can_view_shortcode(string $shortcode): bool {
+        $roles = self::get_shortcode_roles($shortcode);
+        if (empty($roles)) return true; // no restriction
+
+        $user = wp_get_current_user();
+        if (!$user->ID) return false;
+
+        foreach ($roles as $role) {
+            if (in_array($role, (array) $user->roles, true)) return true;
+        }
+        return false;
     }
 
     private static function render_only_sections(array $section_ids): void {
@@ -662,18 +730,19 @@ class MCEMS_Settings {
         }
 
         $tab = isset($_GET['tab']) ? sanitize_key((string) $_GET['tab']) : 'shortcodes';
-        $allowed = ['shortcodes','bookings','course_access','email','pages'];
+        $allowed = ['shortcodes','bookings','course_access','email','pages','access_control'];
         if (!in_array($tab, $allowed, true)) $tab = 'shortcodes';
 
         echo '<div class="wrap">';
         echo '<h1>' . esc_html__('MC-EMS Settings', 'mc-ems') . '</h1>';
 
         $tabs = [
-            'shortcodes'    => __('Shortcodes', 'mc-ems'),
-            'bookings'      => __('Exam booking settings', 'mc-ems'),
-            'course_access' => __('Course access settings', 'mc-ems'),
-            'email'         => __('Email settings', 'mc-ems'),
-            'pages'         => __('Pages', 'mc-ems'),
+            'shortcodes'     => __('Shortcodes', 'mc-ems'),
+            'access_control' => __('Access Control', 'mc-ems'),
+            'bookings'       => __('Exam booking settings', 'mc-ems'),
+            'course_access'  => __('Course access settings', 'mc-ems'),
+            'email'          => __('Email settings', 'mc-ems'),
+            'pages'          => __('Pages', 'mc-ems'),
         ];
 
         echo '<h2 class="nav-tab-wrapper" style="margin-top:12px;">';
@@ -688,12 +757,12 @@ class MCEMS_Settings {
             echo '<div style="margin:16px 0;padding:14px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;">';
             echo '<h2 style="margin:0 0 10px 0;">' . esc_html__('Available shortcodes', 'mc-ems') . '</h2>';
             echo '<table class="widefat striped" style="margin:0;">';
-            echo '<thead><tr><th style="width:260px;">Shortcode</th><th>' . esc_html__('Description', 'mc-ems') . '</th><th style="width:140px;">' . esc_html__('Availability', 'mc-ems') . '</th></tr></thead><tbody>';
+            echo '<thead><tr><th style="width:260px;">Shortcode</th><th>' . esc_html__('Description', 'mc-ems') . '</th></tr></thead><tbody>';
 
-            echo '<tr><td><code>[mcems_book_exam]</code></td><td>' . esc_html__('Exam booking (select course → calendar → choose exam session).', 'mc-ems') . '</td><td><span style="font-weight:800;color:#067647;">' . esc_html__('Base', 'mc-ems') . '</span></td></tr>';
-            echo '<tr><td><code>[mcems_manage_booking]</code></td><td>' . esc_html__('Shows the logged-in user exam bookings and allows cancellation.', 'mc-ems') . '</td><td><span style="font-weight:800;color:#067647;">' . esc_html__('Base', 'mc-ems') . '</span></td></tr>';
-            echo '<tr><td><code>[mcems_sessions_calendar]</code></td><td>' . esc_html__('Calendar to assign proctors to exam sessions.', 'mc-ems') . '</td><td><span style="font-weight:800;color:#067647;">' . esc_html__('Base', 'mc-ems') . '</span></td></tr>';
-            echo '<tr><td><code>[mcems_bookings_list]</code></td><td>' . esc_html__('Exam bookings list (with date and course filters).', 'mc-ems') . '</td><td><span style="font-weight:800;color:#067647;">' . esc_html__('Base', 'mc-ems') . '</span></td></tr>';
+            echo '<tr><td><code>[mcems_book_exam]</code></td><td>' . esc_html__('Exam booking (select course → calendar → choose exam session).', 'mc-ems') . '</td></tr>';
+            echo '<tr><td><code>[mcems_manage_booking]</code></td><td>' . esc_html__('Shows the logged-in user exam bookings and allows cancellation.', 'mc-ems') . '</td></tr>';
+            echo '<tr><td><code>[mcems_sessions_calendar]</code></td><td>' . esc_html__('Calendar to assign proctors to exam sessions.', 'mc-ems') . '</td></tr>';
+            echo '<tr><td><code>[mcems_bookings_list]</code></td><td>' . esc_html__('Exam bookings list (with date and course filters).', 'mc-ems') . '</td></tr>';
 
             echo '</tbody></table>';
             echo '</div>';
@@ -713,6 +782,8 @@ class MCEMS_Settings {
             self::render_only_sections(['mcems_section_email']);
         } elseif ($tab === 'pages') {
             self::render_only_sections(['mcems_section_pages']);
+        } elseif ($tab === 'access_control') {
+            self::render_only_sections(['mcems_section_access_control']);
         }
 
         submit_button();
@@ -943,5 +1014,42 @@ class MCEMS_Settings {
             checked($val, 1, false),
             esc_html($desc)
         );
+    }
+
+    public static function field_shortcode_roles(array $args): void {
+        $shortcodes = self::get_access_control_shortcodes();
+        $all_roles  = wp_roles()->roles;
+        $opt        = self::get();
+        $saved      = isset($opt['shortcode_roles']) && is_array($opt['shortcode_roles']) ? $opt['shortcode_roles'] : [];
+
+        echo '<div style="display:flex;flex-direction:column;gap:24px;max-width:700px;">';
+
+        foreach ($shortcodes as $sc_tag => $sc_label) {
+            $checked_roles = isset($saved[$sc_tag]) && is_array($saved[$sc_tag]) ? $saved[$sc_tag] : [];
+            $all_checked   = empty($checked_roles); // empty = all allowed
+
+            echo '<div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px;background:#fff;">';
+            echo '<p style="margin:0 0 4px 0;font-weight:700;font-size:14px;">';
+            echo '<code>[' . esc_html($sc_tag) . ']</code>';
+            echo ' &mdash; ' . esc_html($sc_label);
+            echo '</p>';
+            echo '<p style="margin:0 0 12px 0;font-size:12px;color:#6b7280;">' . esc_html__('Check the roles that are allowed to see this shortcode. If none are checked, all roles can see it.', 'mc-ems') . '</p>';
+            echo '<div style="display:flex;flex-wrap:wrap;gap:10px 20px;">';
+
+            foreach ($all_roles as $role_slug => $role_info) {
+                $role_name = translate_user_role($role_info['name']);
+                $is_checked = $all_checked || in_array($role_slug, $checked_roles, true);
+                $field_name = esc_attr(self::OPTION_KEY) . '[shortcode_roles][' . esc_attr($sc_tag) . '][]';
+                echo '<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">';
+                echo '<input type="checkbox" name="' . $field_name . '" value="' . esc_attr($role_slug) . '"' . ($is_checked ? ' checked' : '') . ' />';
+                echo esc_html($role_name);
+                echo '</label>';
+            }
+
+            echo '</div>';
+            echo '</div>';
+        }
+
+        echo '</div>';
     }
 }
